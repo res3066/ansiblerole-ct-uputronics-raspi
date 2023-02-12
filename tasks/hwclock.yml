@@ -1,0 +1,33 @@
+---
+
+- name: our version of hwclock-set.j2 
+  template:
+    src: templates/hwclock-set.j2 
+    dest: /lib/udev/hwclock-set
+
+- name: disable fake hw clock
+  apt:
+    name: fake-hwclock
+    state: absent
+
+- name: disable fake hw clock some more
+  command:
+    cmd: "update-rc.d -f fake-hwclock remove"
+  become: yes
+
+- name: and kill fake hw clock in systemd too
+  systemd:
+    name: fake-hwclock.service
+    enabled: false
+    state: stopped
+
+- name: copy over rv-3028 patch script for use if necessary (see datasheet page 6 "Note On RTC")
+  copy:
+    src: files/configure-rv3028.sh
+    dest: /home/pi/configure-rv3028.sh
+    mode: 0755
+    owner: pi
+    group: pi
+
+...
+

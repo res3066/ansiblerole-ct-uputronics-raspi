@@ -1,0 +1,39 @@
+---
+
+# Most GPSes that offer both a PPS and an NMEA (or binary) serial
+# interface suffer from the problem that the serial interface is
+# offset by tens to low hundreds of milliseconds and is jittery as
+# all get out (the "tick" in this case being the NL at the end of
+# a particular sentence).  Can't do much about the jitter, but we can
+# at least put in a fudge factor (on the serial only) that will keep it
+# from being such an outlying source that it immediately gets declared
+# a falseticker.  40-45 milliseconds seems a good value here.  You may
+# wish to tweak this as a result of observed failures in the wild, though
+# chasing offsets of fewer than 4 milliseconds is doomed to be a witless
+# mission.
+gps_serial_fudge: 0.04429
+
+# Servers that are on one's local LAN or at least same site.
+local_ntp_servers:
+  - 172.30.251.79
+
+# servers that are reputed to be anycast are fudged to stratum 6
+anycast_ntp_servers:
+  - time.cloudflare.com
+  - x.ns.gin.ntt.net
+  - y.ns.gin.ntt.net
+
+# Servers that are "out there" on The Internet, potentially with long
+# round trip times but unlikely to exhibit route oscillation behavior
+# due to anycast are not fudged to lower preference.
+internet_ntp_servers:
+  - time1.stupi.se
+  - ntp1.nss.udel.edu
+ 
+
+# If we are using the RS 2020 lash-up or perhaps ignoring things on the
+# RTC side because reasons, we will wish to set leave_fake_hwclock_alone
+#
+# leave_fake_hwclock_alone: yeah
+
+ 

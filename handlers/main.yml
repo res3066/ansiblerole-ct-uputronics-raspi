@@ -1,0 +1,20 @@
+---
+
+- name: "restart ntpd"
+  systemd:
+    name: ntp
+    daemon_reload: true
+    enabled: true
+    state: restarted
+  listen: "restart ntpd"
+
+- name: "restart gpsd"
+  systemd:
+    name: gpsd
+    daemon_reload: true
+    enabled: true
+    state: restarted
+  listen: "restart gpsd"
+
+...
+

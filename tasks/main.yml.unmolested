@@ -1,0 +1,96 @@
+---
+
+- name: hciuart disabled
+  systemd:
+    name: hciuart
+    enabled: false
+    state: stopped
+
+- name: no serial-getty@ttyAMA0.service
+  systemd:
+    name: serial-getty@ttyAMA0.service
+    enabled: false
+    state: stopped
+
+- name: Updating apt cache
+  apt:
+    update_cache: yes
+
+- name: Installing packages with apt
+  apt:
+    state: present
+    name:
+      - python-smbus
+      - i2c-tools
+      - gpsd
+      - gpsd-clients
+      - ntp
+      - pps-tools
+
+- name: no more serial console
+  replace:
+    path: /boot/cmdline.txt
+    regexp: 'console=serial0,115200'
+    replace: 'console=tty1'
+
+
+- name: our version of /boot/config.txt
+  template:
+    src: templates/config.txt.j2
+    dest: /boot/config.txt
+
+- name: our version of /etc/default/gpsd
+  template:
+    src: templates/gpsd.j2
+    dest: /etc/default/gpsd
+#  notify:
+#    - restart gpsd
+
+- name: our version of /lib/systemd/system/gpsd.service
+  template:
+    src: templates/gpsd.service.j2
+    dest: /lib/systemd/system/gpsd.service
+#  notify:
+#    - restart gpsd
+
+- name: our version of /etc/ntp.conf
+  template:
+    src: templates/ntp.conf.j2
+    dest: /etc/ntp.conf
+  notify:
+    - restart ntpd
+
+- name: enable i2c via raspi-config
+  command:
+    cmd: "raspi-config nonint do_i2c 0"
+  become: yes
+
+- name: our version of hwclock-set.j2 
+  template:
+    src: templates/hwclock-set.j2 
+    dest: /lib/udev/hwclock-set
+
+- name: disable fake hw clock
+  apt:
+    name: fake-hwclock
+    state: absent
+
+- name: disable fake hw clock some more
+  command:
+    cmd: "update-rc.d -f fake-hwclock remove"
+  become: yes
+
+- name: and kill fake hw clock in systemd too
+  systemd:
+    name: fake-hwclock.service
+    enabled: false
+    state: stopped
+
+- name: copy over rv-3028 patch script for use if necessary (see datasheet page 6 "Note On RTC")
+  copy:
+    src: files/configure-rv3028.sh
+    dest: /home/pi/configure-rv3028.sh
+    mode: 0755
+    owner: pi
+    group: pi
+

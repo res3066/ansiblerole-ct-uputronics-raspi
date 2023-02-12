@@ -1,0 +1,64 @@
+# /boot/config.txt
+{{ ansible_managed | comment }}
+
+# /etc/ntp.conf, configuration for ntpd; see ntp.conf(5) for help
+
+driftfile /var/lib/ntp/ntp.drift
+
+# Enable this if you want statistics to be logged.
+statsdir /var/log/ntpstats/
+
+statistics loopstats peerstats clockstats
+filegen loopstats file loopstats type day enable
+filegen peerstats file peerstats type day enable
+filegen clockstats file clockstats type day enable
+
+{% if local_ntp_servers is defined %}
+{% for lns in local_ntp_servers %}
+server {{ lns }} iburst
+{% endfor %}
+{% endif %}
+
+# servers that are reputed to be anycast are fudged to stratum 6
+# though we will abuse them guilt free with iburst
+{% if anycast_ntp_servers is defined %}
+{% for ans in anycast_ntp_servers %}
+server {{ ans }} iburst
+fudge {{ ans }} stratum 6
+{% endfor %}
+{% endif %}
+
+# Normal Internet NTP servers
+{% if internet_ntp_servers is defined %}
+{% for ins in internet_ntp_servers %}
+server {{ ins }}
+{% endfor %}
+{% endif %}
+
+# default restriction
+restrict -4 default kod notrap nomodify nopeer noquery
+restrict -6 default kod notrap nomodify nopeer noquery
+
+# Local users may interrogate the ntp server more closely.
+restrict 127.0.0.1
+restrict ::1
+
+# Needed for adding pool entries (in case someone adds them to one
+# of the ntp server variables
+restrict source notrap nomodify noquery
+
+# If you want to provide time to your local subnet, change the next line.
+# (Again, the address is an example only.)
+#broadcast 192.168.123.255
+
+# Local clock stuff
+# GPS PPS reference .PPS.
+server 127.127.28.2 prefer
+fudge  127.127.28.2 refid PPS
+
+# GPS serial reference .GPS.
+# get time from SHM from gpsd; this seems working
+refclock shm unit 0 maxpoll 4 time1 {{ gps_serial_fudge * 1000 }} refid GPS flag4 1
+server 127.127.28.0
+fudge  127.127.28.0 refid GPS
+fudge  127.127.28.0 time1 {{ gps_serial_fudge }}

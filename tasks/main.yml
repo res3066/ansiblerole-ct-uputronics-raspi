@@ -1,0 +1,103 @@
+---
+
+- name: hciuart disabled
+  systemd:
+    name: hciuart
+    enabled: false
+    state: stopped
+
+- name: no serial-getty@ttyAMA0.service
+  systemd:
+    name: serial-getty@ttyAMA0.service
+    enabled: false
+    state: stopped
+
+- name: Updating apt cache
+  apt:
+    update_cache: yes
+
+- name: Installing packages with apt
+  apt:
+    state: present
+    name:
+      - python-smbus
+      - i2c-tools
+      - gpsd
+      - gpsd-clients
+      - ntp
+      - pps-tools
+
+- name: no more serial console
+  replace:
+    path: /boot/cmdline.txt
+    regexp: 'console=serial0,115200'
+    replace: 'console=tty1'
+
+
+- name: our version of /boot/config.txt
+  template:
+    src: templates/config.txt.j2
+    dest: /boot/config.txt
+
+- name: our version of /etc/default/gpsd
+  template:
+    src: templates/gpsd.j2
+    dest: /etc/default/gpsd
+#  notify:
+#    - restart gpsd
+
+- name: gpsd stopped and disabled via systemd
+  systemd:
+    name: hciuart
+    enabled: false
+    state: stopped
+
+- name: remove all the gpsd cruft so systemd knows nothing about it
+  file:
+    path: "{{ item }}"
+    state: absent
+  with_items:
+    - /usr/lib/systemd/system/gpsd.service
+    - /lib/systemd/system/gpsd.service
+    - /etc/init.d/gpsd
+
+- name: refresh cache for systemd
+  systemd:
+    daemon_reload: yes
+  become: yes
+
+- name: our version of /lib/systemd/system/gpsd.service
+  template:
+    src: templates/gpsd.service.j2
+    dest: /lib/systemd/system/gpsd.service
+#  notify:
+#    - restart gpsd
+
+- name: refresh cache for systemd
+  systemd:
+    daemon_reload: yes
+  become: yes
+
+- name: gpsd started and enabled under systemd
+  systemd:
+    name: gpsd
+    enabled: true
+    state: started
+
+- name: our version of /etc/ntp.conf
+  template:
+    src: templates/ntp.conf.j2
+    dest: /etc/ntp.conf
+#  notify:
+#    - restart ntpd
+
+- name: enable i2c via raspi-config
+  command:
+    cmd: "raspi-config nonint do_i2c 0"
+  become: yes
+
+- include: hwclock.yml
+  when: leave_fake_hwclock_alone is not defined
+
+...
+
