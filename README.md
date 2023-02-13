@@ -9,13 +9,14 @@ ultracapacitors - we support that too).
 https://v3.airspy.us/product/upu-rpi-gps-rtc/
 
 This board contains what is described as a "72 channel u-blox m8
-engine".  The datasheet for what we believe is the right chip.
+engine".  The datasheet for what we believe is the right chip is in
+the `meta/` subdirectory, along with programmers' guides and the like.
 
 There is some support for a local lash-up that includes a breakout
 board that we picked up in 2020 (also ublox).
 https://v3.airspy.us/product/upu-ublox-m8q3a-sma/
-Trust us, you want to go with the Pi-specific GPS/RTC expansion board
-mentioned above.
+Trust us, you don't want this lash-up - you want to go with the
+Pi-specific GPS/RTC expansion board mentioned above.
 
 DON'T BE A HERO AND FIGURE YOU'RE GONNA DO THIS WITHOUT READING THE FULL
 README.md AND PROBABLY THE DATASHEET TOO.  FUTURE YOU THANKS YOU.
@@ -47,8 +48,8 @@ or similar means of your own devising.
 Role Variables
 -------------
 
-See defaults/main.yml and override to taste in group_vars/all.yml
-in your {{ inventory_dir }} directory (where your playbook probably
+See `defaults/main.yml` (heavily commented for your reading pleasure) and override to taste in `group_vars/all.yml`
+in your `{{ inventory_dir }}` directory (where your playbook probably
 lives).
 
 Dependencies
@@ -64,7 +65,11 @@ Example Playbook
     - hosts: ntpservers
       roles:
          - ct-uputronics-raspi
+      become: yes
 ```
+
+Yes, you're goofing around with system files and kernel settings on the
+target system.  Failing to include `become` would be unbecoming.
 
 Notes
 -----
@@ -82,17 +87,18 @@ changing serial console into something else entirely and creating i2c devices
 without a full reboot are fraught and optimizing to save 90 seconds is really
 not where we want to spend our time.
 
-You may or may not need to run configure-rv3028.sh after installation to
-goose the RTC into the right mode.  See page 6 of the datasheet in meta/
+You may or may not need to run `configure-rv3028.sh` after installation to
+goose the RTC into the right mode.  See page 6 of the datasheet in `meta/`
 and run dmesg to make a determination.  The effects of running the
 configuration script many times have not been explored, so we copy it into
 place and leave it to the discretion of the user whether it needs to be
-run once.  `dmesg | grep rtc` after reboot will inform your choices here.
- 
+run once (results are saved in the flash in the gps chip, so this really
+is "only once".  `dmesg | grep rtc` after reboot will inform your choices here.
+
 Future Directions
 -----------------
 
-gpsd is pretty opinionated about what it ought and ought not do to the
+`gpsd` is pretty opinionated about what it ought and ought not do to the
 gps chip during startup.  A command line flag to leave well enough alone
 because things have already been configured out of band would be a welcome
 addition (pr, upstream).
@@ -107,12 +113,18 @@ to goose things into the right state by poking it over i2c either before
 or after gpsd startup.
 
 Then again, https://github.com/philrandal/gpsctl may be the right direction,
-particularly if we can get the "leave well enough alone" mod into gpsd.
+particularly if we can get the "leave well enough alone" mod into gpsd.  Or
+we could teach gpsctl to speak i2c.  Investigate, iterate.  Note well this is
+not the only gpsctl out there - find and document the other ones.
 
-gpsmon does not have a --json flag by which one could get a snapshot of
+`gpsd` is a broker that allows multiple things to read the gps device.  Local
+tastes may make it preferable to not run `gpsd` and instead have `ntpd` speak
+directly to `/dev/ttyS0` and `/dev/pps0`.
+
+`gpsmon` does not have a --json flag by which one could get a snapshot of
 the current situation and feed it into one's monitoring system.
 
-ntpq does not have a --json flag, ditto.  please support the reference
+`ntpq` does not have a --json flag, ditto.  please support the reference
 implementation.  http://www.ntp.org
 
 
